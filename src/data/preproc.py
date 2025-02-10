@@ -289,7 +289,7 @@ def remove_cursive_style(img):
     for alpha in alpha_vals:
         shift_x = max(-alpha * rows, 0.)
         size = (cols + int(np.ceil(abs(alpha * rows))), rows)
-        transform = np.asarray([[1, alpha, shift_x], [0, 1, 0]], dtype=np.float)
+        transform = np.asarray([[1, alpha, shift_x], [0, 1, 0]], dtype=np.float64)
 
         shear_img = cv2.warpAffine(binary, transform, size, cv2.INTER_NEAREST)
         sum_alpha = 0
