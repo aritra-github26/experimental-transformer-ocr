@@ -27,14 +27,16 @@ import torchvision.transforms as T
 from data import preproc as pp, evaluation
 from data.generator import DataGenerator, Tokenizer
 from data.reader import Dataset
-from network.model import make_model
+from network.model import OCR
+
 from engine import single_image_inference, LabelSmoothing, run_epochs,get_memory
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=str, required=True)
 
-    parser.add_argument("--transform", action="store_true", default=False)
+    parser.add_argument("--transform", action="store_true", default=False, help="Transform dataset to HDF5 file format")
+
     parser.add_argument("--image", type=str, default="")
 
     parser.add_argument("--train", action="store_true", default=False)
@@ -61,15 +63,18 @@ if __name__ == "__main__":
     tokenizer = Tokenizer(chars=charset_base, max_text_length=max_text_length)            
 
     if args.transform:
-        print(f"{args.source} dataset will be transformed...")
+        print(f"{args.source} dataset will be transformed into HDF5 format...")
+
 
         ds = Dataset(source=raw_path, name=args.source)
         ds.read_partitions()
 
-        print("Partitions will be preprocessed...")
+        print("Partitions will be preprocessed for HDF5 storage...")
+
         ds.preprocess_partitions(input_size=input_size)
 
-        print("Partitions will be saved...")
+        print("Partitions will be saved to HDF5 file...")
+
         os.makedirs(os.path.dirname(source_path), exist_ok=True)
 
         for i in ds.partitions:
@@ -78,7 +83,8 @@ if __name__ == "__main__":
                 hf.create_dataset(f"{i}/gt", data=ds.dataset[i]['gt'], compression="gzip", compression_opts=9)
                 print(f"[OK] {i} partition.")
 
-        print(f"Transformation finished.")
+        print(f"Transformation to HDF5 format finished.")
+
 
     elif args.image:
         
@@ -88,7 +94,7 @@ if __name__ == "__main__":
         img = np.repeat(img[..., np.newaxis],3, -1)
         x_test = pp.normalization(img)
 
-        model = make_model(tokenizer.vocab_size, hidden_dim=256, nheads=4,
+        model = OCR(tokenizer.vocab_size, hidden_dim=256, nheads=4,
                  num_encoder_layers=4, num_decoder_layers=4)
         device = torch.device(args.device)
         model.to(device)
@@ -116,7 +122,7 @@ if __name__ == "__main__":
         if args.train:
             
             device = torch.device(device)
-            model = make_model(tokenizer.vocab_size, hidden_dim=256, nheads=4,
+            model = OCR(tokenizer.vocab_size, hidden_dim=256, nheads=4,
                      num_encoder_layers=4, num_decoder_layers=4)
             model.to(device)
             

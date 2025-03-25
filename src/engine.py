@@ -38,48 +38,49 @@ class LabelSmoothing(nn.Module):
 
 
 def train(model, criterion, optimizer, scheduler, dataloader, vocab_length, device):
-
-    model.train()
+    """
+    Train the model using the provided dataloader, which loads data from HDF5 files.
+    """
+    model.train()  # Set the model to training mode
     total_loss = 0
-    for batch, (imgs, labels_y,) in enumerate(dataloader):
+    for batch, (imgs, labels_y,) in enumerate(dataloader):  # Iterate through batches of images and labels
           imgs = imgs.to(device)
           labels_y = labels_y.to(device)
     
           optimizer.zero_grad()
-          output = model(imgs.float(),labels_y.long()[:,:-1])
+          output = model(imgs.float(), labels_y.long()[:, :-1])
 
           norm = (labels_y != 0).sum()
-          loss = criterion(output.log_softmax(-1).contiguous().view(-1, vocab_length), labels_y[:,1:].contiguous().view(-1).long()) / norm
+          loss = criterion(output.log_softmax(-1).contiguous().view(-1, vocab_length), labels_y[:, 1:].contiguous().view(-1).long()) / norm
 
           loss.backward()
           torch.nn.utils.clip_grad_norm_(model.parameters(), 0.2)
           optimizer.step()
-          total_loss += (loss.item()*norm)
+          total_loss += (loss.item() * norm)
 
-    return total_loss / len(dataloader),output
+    return total_loss / len(dataloader), output
 
 def evaluate(model, criterion, dataloader, vocab_length, device):
-
-    model.eval()
+    model.eval()  # Set the model to evaluation mode
     epoch_loss = 0
 
-    with torch.no_grad():
-      for batch, (imgs, labels_y,) in enumerate(dataloader):
+    with torch.no_grad():  # Disable gradient calculation for evaluation
+        for batch, (imgs, labels_y) in enumerate(dataloader):  # Iterate through batches of images and labels
             imgs = imgs.to(device)
             labels_y = labels_y.to(device)
 
-            output = model(imgs.float(),labels_y.long()[:,:-1])
+            output = model(imgs.float(), labels_y.long()[:, :-1])
               
             norm = (labels_y != 0).sum()
-            loss = criterion(output.log_softmax(-1).contiguous().view(-1, vocab_length), labels_y[:,1:].contiguous().view(-1).long()) / norm
+            loss = criterion(output.log_softmax(-1).contiguous().view(-1, vocab_length), labels_y[:, 1:].contiguous().view(-1).long()) / norm
   
-            epoch_loss += (loss.item()*norm)
+            epoch_loss += (loss.item() * norm)
 
     return epoch_loss / len(dataloader)
 
 def get_memory(model, imgs):
     x = model.conv(model.get_feature(imgs))
-    bs,_,H, W = x.shape
+    bs, _, H, W = x.shape
     pos = torch.cat([
             model.col_embed[:W].unsqueeze(0).repeat(H, 1, 1),
             model.row_embed[:H].unsqueeze(1).repeat(1, W, 1),
@@ -95,13 +96,14 @@ def single_image_inference(model, img, tokenizer, transform, device):
     img = transform(img)    
     imgs = img.unsqueeze(0).float().to(device)
     with torch.no_grad():    
-      memory = get_memory(model,imgs)
+      memory = get_memory(model, imgs)
       out_indexes = [tokenizer.chars.index('SOS'), ]
       
       for i in range(128):
-            mask = model.generate_square_subsequent_mask(i+1).to(device)
+            mask = model.generate_square_subsequent_mask(i + 1).to(device)
             trg_tensor = torch.LongTensor(out_indexes).unsqueeze(1).to(device)
-            output = model.vocab(model.transformer.decoder(model.query_pos(model.decoder(trg_tensor)), memory,tgt_mask=mask))
+            output = model(imgs, trg_tensor)  # Updated to use imgs
+
             out_token = output.argmax(2)[-1].item()
             if out_token == tokenizer.chars.index('EOS'):
                 break
@@ -125,24 +127,24 @@ def run_epochs(model, criterion, optimizer, scheduler, train_loader, val_loader,
     best_valid_loss = np.inf
     c = 0
     for epoch in range(epochs):     
-        print(f'Epoch: {epoch+1:02}','learning rate{}'.format(scheduler.get_last_lr()))
+        print(f'Epoch: {epoch + 1:02}', 'learning rate{}'.format(scheduler.get_last_lr()))
      
         start_time = time.time()
     
-        train_loss,outputs = train(model, criterion, optimizer, scheduler, train_loader, tokenizer.vocab_size, device)
+        train_loss, outputs = train(model, criterion, optimizer, scheduler, train_loader, tokenizer.vocab_size, device)
         valid_loss = evaluate(model, criterion, val_loader, tokenizer.vocab_size, device)
      
         epoch_mins, epoch_secs = epoch_time(start_time, time.time())
 
-        c+=1
+        c += 1
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
             torch.save(model.state_dict(), target_path)
-            c=0
+            c = 0
      
-        if c>4:
+        if c > 4:
             scheduler.step()
-            c=0
+            c = 0
      
         print(f'Time: {epoch_mins}m {epoch_secs}s')
         print(f'Train Loss: {train_loss:.3f}')
