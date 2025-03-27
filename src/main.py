@@ -121,7 +121,10 @@ if __name__ == "__main__":
         
         if args.train:
             
-            device = torch.device(device)
+            
+            transform = T.Compose([
+                    T.ToTensor()])
+            device = torch.device(args.device)
             model = OCR(tokenizer.vocab_size, hidden_dim=256, nheads=4,
                      num_encoder_layers=4, num_decoder_layers=4)
             model.to(device)
@@ -135,7 +138,7 @@ if __name__ == "__main__":
             optimizer = torch.optim.AdamW(model.parameters(), lr=lr,weight_decay=.0004)
             scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.95)
 
-            run_epochs(model, criterion, optimizer, scheduler, train_loader, val_loader, args.epochs, tokenizer, target_path)                
+            run_epochs(model, criterion, optimizer, scheduler, train_loader, val_loader, args.epochs, tokenizer, target_path, device=device)                
 
 
         elif args.test:
