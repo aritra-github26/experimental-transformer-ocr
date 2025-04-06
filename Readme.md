@@ -1,4 +1,4 @@
-Handwritten Text Recognition (HTR) system implemented using Pytorch and trained on the Bentham/IAM/Rimes/Saint Gall/Washington offline HTR datasets. This Neural Network model recognizes the text contained in the images of segmented texts lines.
+<!-- Handwritten Text Recognition (HTR) system implemented using Pytorch and trained on the Bentham/IAM/Rimes/Saint Gall/Washington offline HTR datasets. This Neural Network model recognizes the text contained in the images of segmented texts lines.
 
 Data pre-processing is totally based on this awesome repository of [handwritten text recognition](https://github.com/arthurflor23/handwritten-text-recognition).
 Data partitioning (train, validation, test) was performed by following the methodology of each dataset. 
@@ -8,7 +8,7 @@ Recentely facebook research realeased a [paper](https://github.com/facebookresea
 
 ## Tutorial (Google Colab/Drive)
 
-A Jupyter Notebook is available for demo, check out the **[tutorial](https://colab.research.google.com/drive/1rCPaksWk7SAH4crOVYVzUaWsKbz2i3jE?authuser=1#scrollTo=rQew0_CkacDU)** on Google Colab/Drive.
+A Jupyter Notebook is available for demo, check out the **[tutorial](https://colab.research.google.com/drive/1rCPaksWk7SAH4crOVYVzUaWsKbz2i3jE?authuser=1#scrollTo=rQew0_CkacDU)** on Google Colab/Drive. -->
 
 ## Datasets supported
 
@@ -42,7 +42,7 @@ e. [Washington](https://fki.tic.heia-fr.ch/databases/washington-database)
 - `--batch_size`: number of the size of each batch
 - `--lr`: Learning rate
 
-**Notes**:
+<!-- **Notes**:
 
 * Model used is from DETR(facebook research) notebook but in there paper they perfromed few more steps.
 * For improving the results few more things can be done:
@@ -53,4 +53,4 @@ e. [Washington](https://fki.tic.heia-fr.ch/databases/washington-database)
     * Trying different backbone model for getting feature vector of image.
 * Training took ~20 hrs on google colab. where as [arthurflor](https://github.com/arthurflor23/handwritten-text-recognition) model can be trained in ~8hrs.
 * Word error rate is 15% less when compared to Arthur's model on bentham dataset.
-* Purpose of this project was to showcase the power of Transformer ie: You can use them anywhere.
+* Purpose of this project was to showcase the power of Transformer ie: You can use them anywhere. -->

@@ -4,6 +4,7 @@ import os
 import html
 import string
 import multiprocessing
+import numpy as np
 import xml.etree.ElementTree as ET
 
 from glob import glob
@@ -95,42 +96,49 @@ class Dataset():
         return dataset
 
     def _iam(self):
-        """IAM dataset reader"""
-
-        pt_path = os.path.join(self.source, "largeWriterIndependentTextLineRecognitionTask")
-        paths = {"train": open(os.path.join(pt_path, "trainset.txt")).read().splitlines(),
-                 "valid": open(os.path.join(pt_path, "validationset1.txt")).read().splitlines(),
-                 "test": open(os.path.join(pt_path, "testset.txt")).read().splitlines()}
-
+        """IAM dataset reader with custom partitioning"""
+        # Read all valid lines from ascii/lines.txt
         lines = open(os.path.join(self.source, "ascii", "lines.txt")).read().splitlines()
-        gt_dict = dict()
-
+        gt_dict = {}
+        
         for line in lines:
             if (not line or line[0] == "#"):
                 continue
 
             split = line.split()
-
             if split[1] == "ok":
                 gt_dict[split[0]] = " ".join(split[8::]).replace("|", " ")
 
+        # Get all valid line IDs and shuffle them
+        line_ids = list(gt_dict.keys())
+        np.random.shuffle(line_ids)
+        
+        # Create partitions (70% train, 15% valid, 15% test)
+        total = len(line_ids)
+        train_end = int(total * 0.7)
+        valid_end = train_end + int(total * 0.15)
+        
+        partitions = {
+            'train': line_ids[:train_end],
+            'valid': line_ids[train_end:valid_end],
+            'test': line_ids[valid_end:]
+        }
+
         dataset = dict()
-
-        for i in self.partitions:
-            dataset[i] = {"dt": [], "gt": []}
-
-            for line in paths[i]:
+        for part in self.partitions:
+            dataset[part] = {"dt": [], "gt": []}
+            
+            for line_id in partitions[part]:
                 try:
-                    split = line.split("-")
+                    split = line_id.split("-")
                     folder = f"{split[0]}-{split[1]}"
-
                     img_file = f"{split[0]}-{split[1]}-{split[2]}.png"
                     img_path = os.path.join(self.source, "lines", split[0], folder, img_file)
-
-                    dataset[i]['gt'].append(gt_dict[line])
-                    dataset[i]['dt'].append(img_path)
-                except KeyError:
-                    pass
+                    
+                    dataset[part]['gt'].append(gt_dict[line_id])
+                    dataset[part]['dt'].append(img_path)
+                except (KeyError, IndexError):
+                    continue
 
         return dataset
 
