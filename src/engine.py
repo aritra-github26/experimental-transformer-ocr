@@ -79,38 +79,39 @@ def evaluate(model, criterion, dataloader, vocab_length, device):
     return epoch_loss / len(dataloader)
 
 def get_memory(model, imgs):
-    x = model.conv(model.get_feature(imgs))
-    bs, _, H, W = x.shape
-    pos = torch.cat([
-            model.col_embed[:W].unsqueeze(0).repeat(H, 1, 1),
-            model.row_embed[:H].unsqueeze(1).repeat(1, W, 1),
-        ], dim=-1).flatten(0, 1).unsqueeze(1)
-
-    return model.transformer.encoder(pos +  0.1 * x.flatten(2).permute(2, 0, 1))
-    
+    # Refactored get_memory for resnet50-biLSTM model: simply extract features and apply conv and lstm
+    with torch.no_grad():
+        features = model.get_feature(imgs)
+        conv_out = model.conv(features)
+        bs, c, h, w = conv_out.size()
+        # Flatten spatial dimensions and permute for LSTM input: (batch, seq_len, feature)
+        lstm_input = conv_out.flatten(2).permute(0, 2, 1)
+        lstm_out, _ = model.lstm(lstm_input)
+    return lstm_out.permute(1, 0, 2)  # Return in shape (seq_len, batch, feature) for compatibility
 
 def single_image_inference(model, img, tokenizer, transform, device):
     '''
-    Run inference on single image
+    Run inference on single image using greedy decoding for resnet50-biLSTM model
     '''
-    img = transform(img)    
+    model.eval()
+    img = transform(img)
     imgs = img.unsqueeze(0).float().to(device)
-    with torch.no_grad():    
-      memory = get_memory(model, imgs)
-      out_indexes = [tokenizer.chars.index('SOS'), ]
-      
-      for i in range(128):
-            mask = model.generate_square_subsequent_mask(i + 1).to(device)
-            trg_tensor = torch.LongTensor(out_indexes).unsqueeze(1).to(device)
-            output = model(imgs, trg_tensor)  # Updated to use imgs
-
-            out_token = output.argmax(2)[-1].item()
+    with torch.no_grad():
+        # Forward pass through backbone, conv, and lstm
+        features = model.get_feature(imgs)
+        conv_out = model.conv(features)
+        bs, c, h, w = conv_out.size()
+        lstm_input = conv_out.flatten(2).permute(0, 2, 1)
+        lstm_out, _ = model.lstm(lstm_input)
+        output = model.vocab(lstm_out)  # (batch, seq_len, vocab_size)
+        output = output.squeeze(0)  # (seq_len, vocab_size)
+        out_indexes = []
+        for i in range(output.size(0)):
+            out_token = output[i].argmax().item()
             if out_token == tokenizer.chars.index('EOS'):
                 break
-            
             out_indexes.append(out_token)
-
-    pre = tokenizer.decode(out_indexes[1:])
+    pre = tokenizer.decode(out_indexes)
     return pre
 
 def epoch_time(start_time, end_time):

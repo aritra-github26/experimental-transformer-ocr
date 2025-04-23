@@ -152,17 +152,15 @@ if __name__ == "__main__":
                     src, trg = batch
                     src, trg = src.cuda(), trg.cuda()
                     
-                    memory = get_memory(model,src.float())
-                    out_indexes = [tokenizer.chars.index('SOS'), ]
-                    for i in range(max_text_length):
-                        mask = model.generate_square_subsequent_mask(i+1).to('cuda')
-                        trg_tensor = torch.LongTensor(out_indexes).unsqueeze(1).to(device)
-                        output = model.vocab(model.transformer.decoder(model.query_pos(model.decoder(trg_tensor)), memory,tgt_mask=mask))
-                        out_token = output.argmax(2)[-1].item()
-                        out_indexes.append(out_token)
-                        # print(output.shape)
-                        if out_token == 3:
+                    # Forward pass through model
+                    output = model(src.float(), trg.long()[:, :-1])
+                    output = output.squeeze(0)  # (seq_len, vocab_size)
+                    out_indexes = []
+                    for i in range(output.size(0)):
+                        out_token = output[i].argmax().item()
+                        if out_token == tokenizer.chars.index('EOS'):
                             break
+                        out_indexes.append(out_token)
                         
                     predicts.append(tokenizer.decode(out_indexes))
                     gt.append(tokenizer.decode(trg.flatten(0,1)))

@@ -32,8 +32,7 @@ class PositionalEncoding(nn.Module):
 
 class OCR(nn.Module):
 
-    def __init__(self, vocab_len, hidden_dim, nheads,
-                 num_encoder_layers, num_decoder_layers):
+    def __init__(self, vocab_len, hidden_dim):
         super().__init__()
 
         # create ResNet-50 backbone
@@ -109,8 +108,6 @@ class OCR(nn.Module):
         return output
 
 
-def make_model(vocab_len, hidden_dim=256, nheads=4,
-                 num_encoder_layers=4, num_decoder_layers=4):
+def make_model(vocab_len, hidden_dim=256):
     
-    return OCR(vocab_len, hidden_dim, nheads,
-                 num_encoder_layers, num_decoder_layers)
+    return OCR(vocab_len, hidden_dim)
